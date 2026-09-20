@@ -27,6 +27,12 @@ python3 alarm.py run
 
 Alarms are one-time: once an alarm rings, it's removed from `alarms.json`.
 
+When an alarm fires, `run` rings it every second until you press Enter:
+a repeating terminal bell, a re-printed banner, and a best-effort OS-native
+sound (`afplay` on macOS, `winsound` on Windows, `paplay`/`aplay` on Linux).
+If no audio backend is found it just falls back to the bell + banner —
+the alarm never fails to notify visually even without sound.
+
 ## Testing
 
 Tests use `pytest`. If it's not already installed:
