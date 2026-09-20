@@ -2,6 +2,8 @@
 """CLI alarm clock. Alarms persist to alarms.json; `run` watches and rings them."""
 import argparse
 import json
+import shutil
+import subprocess
 import sys
 import threading
 import time
@@ -41,12 +43,36 @@ def remove_alarm(alarm_id, path=DEFAULT_PATH):
     return len(remaining) != len(alarms)
 
 
+def play_native_sound():
+    """Best-effort OS-native beep. Never raises — silence just means no audio backend found."""
+    try:
+        if sys.platform == "darwin":
+            subprocess.run(["afplay", "/System/Library/Sounds/Glass.aiff"],
+                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=2)
+        elif sys.platform == "win32":
+            import winsound
+            winsound.Beep(1000, 400)
+        else:
+            for player, sound in (
+                ("paplay", "/usr/share/sounds/freedesktop/stereo/complete.oga"),
+                ("aplay", "/usr/share/sounds/alsa/Front_Center.wav"),
+            ):
+                if shutil.which(player) and Path(sound).exists():
+                    subprocess.run([player, sound],
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=2)
+                    break
+    except Exception:
+        pass
+
+
 def ring(alarm):
-    print(f"\n\U0001F570  ALARM: {alarm['label']} ({alarm['time']}) — press Enter to dismiss")
+    banner = f"\U0001F570  ALARM: {alarm['label']} ({alarm['time']}) — press Enter to dismiss"
     stop_event = threading.Event()
     threading.Thread(target=lambda: (input(), stop_event.set()), daemon=True).start()
     while not stop_event.is_set():
+        print(f"\n{banner}", flush=True)
         print("\a", end="", flush=True)
+        play_native_sound()
         stop_event.wait(1)
 
 
